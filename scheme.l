@@ -115,7 +115,7 @@ Token token = -1;
 
 Token get_token(){
   token =  yylex();
-  printf("%s", yytext);
+//  printf("%s", yytext);
   return token;
 }
 
@@ -126,9 +126,8 @@ Expr* NullList(){
 Expr* parse(){
 /*parse literal or list or quote*/
   Expr* expr = NullList();
- printf("AA");
   get_token();
-  printf("%d", expr == NULL ? 1 : 0);
+//  printf("%d", expr == NULL ? 1 : 0);
   switch(token){
     case QUOTE_MARK :
       expr = parse_quote();
@@ -202,8 +201,6 @@ static Expr* expr_tail(Expr* expr)
 
 Expr* add_symbol(Expr* expr, char *sym)
 {
-    printf("add_symbol%s", sym); // printf("%s", yytext);
- 
     Expr* new_expr;
     Expr* tail_expr;
 
@@ -215,7 +212,6 @@ Expr* add_symbol(Expr* expr, char *sym)
 
     tail_expr = expr_tail(expr);
     if(tail_expr == NULL){
-	printf("<%s>", new_expr->u.symbol);
 	return new_expr;
     }else{
 	tail_expr->next = new_expr;
@@ -276,7 +272,6 @@ Expr* add_boolean(Expr* expr, char *booltext){
 
 Expr* parse_quote(){
   Expr *new_expr;
- printf("<inparsequote>");
 
   new_expr = malloc(sizeof(Expr));
   new_expr->type = Quote_Exp;
@@ -313,10 +308,10 @@ void print_expr(Expr* expr){
    while(expr != NULL){
      switch(expr->type){
      case Number_Exp :
-       printf("intvalue%d", expr->u.int_value);
+       printf("intvalue%d\n", expr->u.int_value);
        break;
      case Symbol_Exp :
-       printf("symbolvalue%s", expr->u.symbol);
+       printf("symbolvalue%s\n", expr->u.symbol);
        break;
      case Quote_Exp :
        printf("'");
@@ -345,7 +340,9 @@ int eval_operand(Env* env, Expr* expr){
   case Number_Exp :
     return expr->u.int_value;
   case Symbol_Exp :
-    return lookup_number_symbol(env, expr, get_second(expr));
+  printf("in eval_operand symbolexpression \n");
+//    return lookup_number_symbol(env, expr, get_second(expr));
+     return  lookup_number_symbol(env, expr->u.symbol);
   case Pair_Exp :
     return eval_Pair(env, expr);
   default :
@@ -356,6 +353,7 @@ int eval_operand(Env* env, Expr* expr){
 
 int lookup_number_symbol(Env* env, char* symbol_name){
   int i;
+  printf("in lookupnumversymbol 'x'\n env->num is %d, symbol_name is %s, env->symbols[0] is %s\n ", env->num, symbol_name, env->symbols[0]);
   for(i=0; i <= env->num; i++){
     if(strcmp(env->symbols[i], symbol_name) == 0){
       if(env->kinds[i] == 0){
@@ -422,16 +420,11 @@ int eval(Env* env, Expr* expr){
   while(expr != NULL){
     switch(expr->type){
     case Number_Exp :
-     printf("%d", expr->u.int_value);
      return 0;
-/*   case Symbol_Exp :
-     printf("%s", expr->u.symbol);
-     return 0;*/
    case Quote_Exp :
      eval_Quote(env, expr);     
      return 0;
    case Pair_Exp :
-     printf("HEW");
      return eval_Pair(env, expr);
    }
  expr = expr->next;
@@ -444,57 +437,124 @@ int eval_Quote(Expr* expr){
 }
 
 int eval_Pair(Env* env, Expr* expr){
-  printf("which_expr?%s\n", expr->u.symbol);
   expr = expr->u.list;
-  printf("it's symbol is %d", expr==NULL ? 100 :  111);
   if(strcmp(expr->u.symbol, "+") == 0){
-//    return eval_plus(env, expr);
-    printf("value is %d", eval_plus(env, expr));
-
-    return 0;
+    printf("in plus\n");
+    return printf("%d", eval_plus(env, expr));
   }else if(strcmp(expr->u.symbol, "-") == 0){
-    return printf("%d", eval_minus(env, expr));
+    return eval_minus(env, expr);
   }else if(strcmp(expr->u.symbol, "define") == 0){
     return eval_define(env, expr);
+  }else if(strcmp(expr->u.symbol, "defun") == 0){
+    printf("in defun\n");
+    return eval_defun(env, expr);
+  }else{
+    printf("in function\n");
+    return eval_function(env, expr, expr->u.symbol);
   }
 }
+
 int eval_plus(Env* env, Expr* expr){
-  printf("%d", expr->type == Pair_Exp ? 123 : 321);
-  return eval_operand(env, get_second(expr)) + eval_operand(env, get_third(expr));
+//  printf("%d", expr->type == Pair_Exp ? 123 : 321);
+  int x ,y; 
+  printf("in plus, expr's ymbol is %s\n expr->next->u.symbol is %s\n", expr->u.symbol, get_second(expr)->u.symbol);
+  x = eval_operand(env, get_second(expr));
+  printf("after eval first operand in (+ x 2)");
+  y = eval_operand(env, get_third(expr));
+  return x + y;
 }
 
 int eval_minus(Env* env, Expr* expr){
   return eval_operand(env, get_second(expr)) - eval_operand(env, get_third(expr));
 }
 
+/* DEFINE */ 
 int eval_define(Env* env, Expr* expr){
   Expr* symbol_expr = get_second(expr);
   char* symbol = symbol_expr->u.symbol;
 
   Expr* value_expr = get_third(expr);
-int value = value_expr->u.int_value;
-  printf("here?");
+  int value = value_expr->u.int_value;
   record_integer(env, symbol, value);
  return value;
 }
 
-Env* init_env(Env *env){
-  env = malloc(sizeof(Env));
+/* DEFUN */
+int eval_defun(Env* env, Expr* expr){
+  Expr* symbol_expr = get_second(expr);
+  char* symbol = symbol_expr->u.symbol;
+  printf("function symbol is %s\n", symbol);  
+
+  Expr* func_body = get_third(expr);
+//  Expr* func_body = func_body_expr->u.list;
+  printf("function body is <\n");
+  print_expr(func_body);
+  printf(">\n");
+  record_expr(env, symbol, func_body);
+  return 0;
+}
+
+/* element list */
+Expr *get_expr_element(Expr *expr){
+  return expr->u.list;
+}
+
+/*element symbol */
+char *get_symbol_element(Expr *expr){
+  return expr->u.symbol;
+}
+
+/* init environmet */
+void init_env(Env* env, Env* parent){
   env->num = 0;
-  return env;
+  env->parent = parent;
+}
+
+/* eval function */
+
+int eval_function(Env* env, Expr* expr, char * op){
+  Expr *args, *body, *function;
+  Env new_env;
+ init_env(&new_env, env); // tmp env, it exists only while executing this function
+
+  expr = get_second(expr); // get real function argument list
+  printf("env init after\n");
+  function = lookup_expr_symbol(env, op);// get imaginary function
+  print_expr(function);
+  args = get_expr_element(function); // get imaginary function argument list
+  print_expr(args);
+  body = get_second(function); // get imaginary function body 
+  print_expr(body);
+
+    printf("body's symbol is %s\n env->num is %d \n", body->u.list->u.symbol, env->num);
+
+  while(args != NULL){ // set environment
+    char *symbol = get_symbol_element(args);
+    int value = eval_operand(env, expr);
+    printf("value is %d; symbol is %s; new_env->num is %d\n", value, symbol, (&new_env)->num);
+    record_integer(&new_env, symbol, value);
+
+    args = get_second(args);
+    printf("%s\n", args == NULL ? "args is NULL!" : "args is NOT NULL!");
+    expr = get_second(expr);
+  }
+  printf("here\n");
+  return printf("<%d>", eval_Pair(&new_env, body));
 }
 
 int main(void)
 {
 Expr* expr;
 int x;
-Env* env = init_env(env);
+Env env;
+ init_env(&env, NULL);
 for(;;){
 expr = parse();
+print_expr(expr);
 if(expr == NULL){
   break;
 }else{
-  eval(env, expr);
+  eval(&env, expr);
 }
 }
 return 0;
