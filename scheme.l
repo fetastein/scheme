@@ -418,9 +418,12 @@ void record_integer(Env* env, char* symbol, int value)
 int eval(Env* env, Expr* expr){
 
   while(expr != NULL){
+     printf("in numberexp\n");
     switch(expr->type){
     case Number_Exp :
-     return 0;
+//     return 0; 
+     printf("aa%d\n", expr->u.int_value);
+     return expr->u.int_value;
    case Quote_Exp :
      eval_Quote(env, expr);     
      return 0;
@@ -448,6 +451,9 @@ int eval_Pair(Env* env, Expr* expr){
   }else if(strcmp(expr->u.symbol, "defun") == 0){
     printf("in defun\n");
     return eval_defun(env, expr);
+  }else if(strcmp(expr->u.symbol, "if") == 0){
+  printf("in if%s\n", expr->u.symbol);
+    return eval_if(env, expr);
   }else{
     printf("in function\n");
     return eval_function(env, expr, expr->u.symbol);
@@ -540,6 +546,25 @@ int eval_function(Env* env, Expr* expr, char * op){
   }
   printf("here\n");
   return printf("<%d>", eval_Pair(&new_env, body));
+}
+
+/* eval if statement */
+
+int eval_if(Env *env, Expr* expr){
+  Expr *test_expr, *then_expr, *else_expr;
+  test_expr = expr->next;
+  then_expr = expr->next->next;
+  else_expr = expr->next->next->next;
+  
+  if(eval(env, test_expr)){
+  printf("in true");
+    return eval(env, then_expr);
+  }else{
+  printf("in false");
+    return eval(env, else_expr);
+  }
+  fputs("Error: error in if expression\n", stderr);  
+  exit(1);
 }
 
 int main(void)
