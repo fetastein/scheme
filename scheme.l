@@ -2,74 +2,11 @@
 %option array
 
 %{
+
 /*======line numer======*/
 int mylineno = 0;
 
-/*======token enumelator======*/
-typedef int Token;
-
-enum {
-  DOT,
-  IDENTIFIER,
-  STRING,
-  BOOLEAN,
-  LPAR,
-  RPAR,
-  SHARP,
-  QUOTE_MARK,
-  CHAR,
-  NUMBER
-};
-
-/*======expression definition======*/
-typedef enum{
-  Bool_Exp,
-  Number_Exp,
-  Str_Exp,
-  Char_Exp,
-  Quote_Exp,
-  Symbol_Exp,
-  Pair_Exp,
-}ExpressionType;
-
-struct Expr_t{
-  ExpressionType type;
-  union{
-    int int_value;
-    char *symbol;
-    struct Expr_t *list;
-  }u;
-  struct Expr_t *next;
-};
-
-typedef struct Expr_t    Expr;
-
-/*======Environment struct definition======*/
-#define ENVIRONMENT_SIZE 64
-
-struct Env_t {
-    int         num;
-    char*       symbols[ENVIRONMENT_SIZE];
-    int         kinds[ENVIRONMENT_SIZE];   /* '0' means NUMBER or '1' means LIST */
-    union {
-        int     number;
-        Expr*   expr;
-    } values[ENVIRONMENT_SIZE];
-    struct Env_t* parent;
-};
-
-typedef struct Env_t Env;
-
-
-Expr* parse_list();
-Expr* parse_literal();
-Expr* add_symbol(Expr* expr, char *sym);
-Expr* add_number(Expr* expr, int i);
-Expr* add_list(Expr* expr);
-Expr* parse_quote();
-Expr* add_string(Expr* expr, char *str);
-Expr* add_char(Expr* expr, char ch);
-Expr* add_boolean(Expr* expr, char *booltext);
+#include "scheme.h"
 %}
 
 letter 	  [\x00-\xff]
@@ -120,7 +57,7 @@ Token get_token(){
 }
 
 Expr* NullList(){
-  return NULL;
+  return (Expr*)NULL;
 }
 
 Expr* parse(){
@@ -415,7 +352,7 @@ void record_integer(Env* env, char* symbol, int value)
     ++env->num;
 }
 
-int eval(Env* env, Expr* expr){
+Expr* eval(Env* env, Expr* expr){
 
   while(expr != NULL){
      printf("in numberexp\n");
@@ -423,10 +360,14 @@ int eval(Env* env, Expr* expr){
     case Number_Exp :
 //     return 0; 
      printf("aa%d\n", expr->u.int_value);
-     return expr->u.int_value;
+//     return expr->u.int_value;
+     return expr;
+   case Symbol_Exp :
+     return lookup_expr_symbol(env, expr->u.symbol);
    case Quote_Exp :
-     eval_Quote(env, expr);     
-     return 0;
+     return (Expr *)eval_Quote(expr);     
+//     return 0;
+     return NullList();
    case Pair_Exp :
      return eval_Pair(env, expr);
    }
@@ -434,23 +375,24 @@ int eval(Env* env, Expr* expr){
  }
 }
 
-int eval_Quote(Expr* expr){
+Expr* eval_Quote(Expr* expr){
   print_expr(expr);
-  return 0;
+  return NullList();
 }
 
-int eval_Pair(Env* env, Expr* expr){
+Expr* eval_Pair(Env* env, Expr* expr){
   expr = expr->u.list;
   if(strcmp(expr->u.symbol, "+") == 0){
     printf("in plus\n");
-    return printf("%d", eval_plus(env, expr));
+//    return printf("%d", eval_plus(env, expr));
+    return eval_plus(env, expr);
   }else if(strcmp(expr->u.symbol, "-") == 0){
     return eval_minus(env, expr);
   }else if(strcmp(expr->u.symbol, "define") == 0){
     return eval_define(env, expr);
-  }else if(strcmp(expr->u.symbol, "defun") == 0){
-    printf("in defun\n");
-    return eval_defun(env, expr);
+//  }else if(strcmp(expr->u.symbol, "defun") == 0){
+//    printf("in defun\n");
+//    return eval_defun(env, expr);
   }else if(strcmp(expr->u.symbol, "if") == 0){
   printf("in if%s\n", expr->u.symbol);
     return eval_if(env, expr);
@@ -460,29 +402,50 @@ int eval_Pair(Env* env, Expr* expr){
   }
 }
 
-int eval_plus(Env* env, Expr* expr){
+Expr* eval_plus(Env* env, Expr* expr){
 //  printf("%d", expr->type == Pair_Exp ? 123 : 321);
   int x ,y; 
-  printf("in plus, expr's ymbol is %s\n expr->next->u.symbol is %s\n", expr->u.symbol, get_second(expr)->u.symbol);
+  //  printf("in plus, expr's ymbol is %s\n expr->next->u.symbol is %s\n", expr->u.symbol, get_second(expr)->u.symbol);
   x = eval_operand(env, get_second(expr));
   printf("after eval first operand in (+ x 2)");
   y = eval_operand(env, get_third(expr));
-  return x + y;
+  printf("%d\n", x + y);
+  Expr *ret_val = malloc(sizeof(Expr));
+  ret_val->type = Number_Exp;
+  ret_val->u.int_value = x + y;
+//  return x + y;
+  return ret_val;
 }
-
+Expr* eval_minus(Env* env, Expr* expr){
+//  printf("%d", expr->type == Pair_Exp ? 123 : 321);
+  int x ,y; 
+  //  printf("in plus, expr's ymbol is %s\n expr->next->u.symbol is %s\n", expr->u.symbol, get_second(expr)->u.symbol);
+  x = eval_operand(env, get_second(expr));
+  printf("after eval first operand in (+ x 2)");
+  y = eval_operand(env, get_third(expr));
+  printf("%d\n", x - y);
+  Expr* ret_val = malloc(sizeof(Expr));
+  ret_val->type = Number_Exp;
+  ret_val->u.int_value = x - y;
+//  return x - y;
+  return ret_val;
+}
+/*
 int eval_minus(Env* env, Expr* expr){
   return eval_operand(env, get_second(expr)) - eval_operand(env, get_third(expr));
 }
+*/
 
 /* DEFINE */ 
-int eval_define(Env* env, Expr* expr){
+Expr* eval_define(Env* env, Expr* expr){
   Expr* symbol_expr = get_second(expr);
   char* symbol = symbol_expr->u.symbol;
 
   Expr* value_expr = get_third(expr);
-  int value = value_expr->u.int_value;
-  record_integer(env, symbol, value);
- return value;
+//  int value = value_expr->u.int_value;
+  Expr* value = value_expr;
+  record_expr(env, symbol, value);
+  return value;
 }
 
 /* DEFUN */
@@ -518,14 +481,15 @@ void init_env(Env* env, Env* parent){
 
 /* eval function */
 
-int eval_function(Env* env, Expr* expr, char * op){
+Expr* eval_function(Env* env, Expr* expr, char * op){
   Expr *args, *body, *function;
   Env new_env;
  init_env(&new_env, env); // tmp env, it exists only while executing this function
 
   expr = get_second(expr); // get real function argument list
   printf("env init after\n");
-  function = lookup_expr_symbol(env, op);// get imaginary function
+//  function = lookup_expr_symbol(env, op);// get imaginary function
+  function = eval(env, expr);
   print_expr(function);
   args = get_expr_element(function); // get imaginary function argument list
   print_expr(args);
@@ -545,12 +509,13 @@ int eval_function(Env* env, Expr* expr, char * op){
     expr = get_second(expr);
   }
   printf("here\n");
-  return printf("<%d>", eval_Pair(&new_env, body));
+//  return printf("<%d>", eval_Pair(&new_env, body));
+  return eval_Pair(&new_env, body);
 }
 
 /* eval if statement */
 
-int eval_if(Env *env, Expr* expr){
+Expr* eval_if(Env *env, Expr* expr){
   Expr *test_expr, *then_expr, *else_expr;
   test_expr = expr->next;
   then_expr = expr->next->next;
