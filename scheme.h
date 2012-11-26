@@ -1,8 +1,11 @@
+#ifndef SCHEME_H
+#define SCHEME_H
 
-/*======token enumelator======*/
+#include<stdio.h>
+#include<stdlib.h>
 typedef int Token;
 
-enum {
+enum{
   DOT,
   IDENTIFIER,
   STRING,
@@ -15,6 +18,7 @@ enum {
   NUMBER
 };
 
+
 /*======expression definition======*/
 typedef enum{
   Bool_Exp=0,
@@ -24,6 +28,7 @@ typedef enum{
   Quote_Exp,
   Symbol_Exp,
   Pair_Exp,
+  Halt_Exp
 }ExpressionType;
 
 struct Expr_t{
@@ -51,31 +56,35 @@ struct Env_t {
     } values[ENVIRONMENT_SIZE];
     struct Env_t* parent;
 };
-
 typedef struct Env_t Env;
+Token GetToken();
+Expr* NullList();
+Expr* Parse();
+Expr* ParseQuote();
+Expr* ParseList();
+Expr* ParseLiteral();
 
+Expr* AddList(Expr* expr);
+Expr* AddSymbol(Expr* expr, char *sym);
+Expr* AddNumber(Expr* expr, int i);
+Expr* AddString(Expr* expr, char* str);
+Expr* AddChar(Expr* expr, char ch);
+Expr* AddBoolean(Expr* expr, char *booltext);
 
-Expr* parse_list();
-Expr* parse_literal();
-Expr* add_symbol(Expr* expr, char *sym);
-Expr* add_number(Expr* expr, int i);
-Expr* add_list(Expr* expr);
-Expr* parse_quote();
-Expr* add_string(Expr* expr, char *str);
-Expr* add_char(Expr* expr, char ch);
-Expr* add_boolean(Expr* expr, char *booltext);
+Expr* ExprTail(Expr* expr);
+char* MakeSymbol(char* yytext);
+void PrintExpr(Expr* expr);
+Expr* GetSecond(Expr* expr);
+Expr* GetThird(Expr* expr);
 
-Expr* eval_operand(Env* env, Expr* expr, Expr* cont);
-Expr* eval(Env* env, Expr* expr,Expr* cont);
-Expr* eval_Quote(Expr* expr);
-Expr* eval_Pair(Env* env, Expr* expr, Expr* cont);
-Expr* eval_plus(Env* env, Expr* expr, Expr* cont);
-Expr* eval_minus(Env* env, Expr* expr, Expr* cont);
-Expr* eval_define(Env* env, Expr* expr, Expr* cont);
-Expr* eval_function(Env* env, Expr* expr, char* op, Expr* cont);
-Expr* eval_if(Env* env, Expr* expr, Expr* cont);
+Expr* Eval(Env* env, Expr* expr, Expr* cont);
+Expr* EvalQuote(Expr* expr);
+Expr* EvalPair(Env* env, Expr* expr, Expr* cont);
+Expr* EvalPlus(Env* env, Expr* expr, Expr* cont);
+Expr* EvalMinus(Env* env, Expr* expr, Expr* cont);
+Expr* EvalDefine(Env* env, Expr* expr, Expr* cont);
+Expr* EvalFunction(Env* env, Expr* expr, Expr* cont);
+Expr* EvalIf(Env* env, Expr* expr, Expr* cont);
+Expr* EvalLambda(Env* env, Expr* expr, Expr* cont);
 
-
-
-#define LAMBDA_NAME_LENGTH 100
-
+#endif
