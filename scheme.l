@@ -317,16 +317,16 @@ int lookup_number_symbol(Env* env, char* symbol_name){
 
 Expr *lookup_expr_symbol(Env* env, char* symbol_name){
   int i;
-  printf("in lookup '%s' expr symbol\n", symbol_name);
+  //  printf("in lookup '%s' expr symbol\n", symbol_name);
   for(i=0; i < env->num; i++){
     if(strcmp(env->symbols[i], symbol_name) == 0){
       return env->values[i].expr;
     }else{
-      fputs("lookup_list_symbol(): tha value is not an integer.\n", stderr);
+      //      fputs("lookup_list_symbol(): tha value is not an integer.\n", stderr);
     }
   }
 
-  printf("Not found %s in current Env%s", symbol_name);
+  //  printf("Not found %s in current Env%s", symbol_name);
   if(env->parent == NULL){
     fputs("Error: there is no such expr\n", stderr);
     exit(1);
@@ -345,9 +345,9 @@ void record_expr(Env* env, char* symbol, Expr* expr){
   env->kinds[i] = 1; // '1' means EXPR
   env->values[i].expr = expr;
   ++env->num;
-  printf("////%s in env [%d]===", symbol, i);
-  PrintValue(expr);
-  printf("===%s", symbol);
+  //  printf("////%s in env [%d]===", symbol, i);
+  //  PrintValue(expr);
+  //  printf("===%s", symbol);
 }
 
 void record_integer(Env* env, char* symbol, int value)
