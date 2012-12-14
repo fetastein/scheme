@@ -80,12 +80,22 @@ Expr* Parse(){
   case CHAR:
     expr = ParseLiteral();
     break;
+  case IDENTIFIER :
+    expr = ParseSymbol();
+    PrintExpr(expr);
+    break;
   case RPAR:
     fputs("BAD TOKEN ')'", stderr);
     break;
   default:
     break;
   }
+  return expr;
+}
+
+Expr* ParseSymbol(){
+  Expr* expr = NullList();
+  expr = AddSymbol(expr, MakeSymbol(yytext));
   return expr;
 }
 
@@ -224,7 +234,7 @@ Expr* ParseLiteral(){
     new_expr = AddNumber(NullList(), atoi(yytext));
     break;
   case STRING :
-    new_expr = AddString(NullList(), MakeSymbol(yytext));
+
     break;
   case CHAR :
     new_expr = AddChar(NullList(), yytext[0]);
@@ -253,21 +263,27 @@ void PrintExpr(Expr* expr){
       PrintExpr(expr->u.list);
       break;
     case Pair_Exp :
-
       printf("( LPAREN level: %d START\n", ++depth);
       PrintExpr(expr->u.list);
-
       printf(") RPAREN level :%d END\n", depth--);
       break; 
     case Halt_Exp :
       printf("HALT\n");
+    case Bool_Exp :
+      printf("bool valueis %d\n", expr->u.int_value);
+      break;
+    case Null_Exp:
+      printf("NULL expr\n");
+      break;
     default :
       break;
     }
 
     expr = expr->next;
   }
+
 }
+
 
 Expr* GetSecond(Expr* expr){
   Expr* second_arg = expr->next;
@@ -299,18 +315,17 @@ int lookup_number_symbol(Env* env, char* symbol_name){
   }
 }
 
-Expr* lookup_expr_symbol(Env* env, char* symbol_name){
+Expr *lookup_expr_symbol(Env* env, char* symbol_name){
   int i;
   printf("in lookup '%s' expr symbol\n", symbol_name);
   for(i=0; i < env->num; i++){
     if(strcmp(env->symbols[i], symbol_name) == 0){
-      if(env->kinds[i] == 1){
-        return env->values[i].expr;
-      }else{
-        fputs("lookup_list_symbol(): tha value is not an integer.\n", stderr);
-      }
+      return env->values[i].expr;
+    }else{
+      fputs("lookup_list_symbol(): tha value is not an integer.\n", stderr);
     }
   }
+
   printf("Not found %s in current Env%s", symbol_name);
   if(env->parent == NULL){
     fputs("Error: there is no such expr\n", stderr);
@@ -331,7 +346,7 @@ void record_expr(Env* env, char* symbol, Expr* expr){
   env->values[i].expr = expr;
   ++env->num;
   printf("////%s in env [%d]===", symbol, i);
-  PrintExpr(expr);
+  PrintValue(expr);
   printf("===%s", symbol);
 }
 
@@ -353,13 +368,86 @@ void init_env(Env* env, Env* parent){
   env->num = 0;
   env->parent = parent;
 }
+// CONT endpoint
+Expr* cont_endpoint;
+void PrintValue(Expr* value){
+  while(value != NULL){
+    switch(value->type){
+    case Number_Exp :
+      printf(" %d", value->u.int_value);
+      //      break;
+      return;
+    case Symbol_Exp :
+      printf(" %s", value->u.symbol);
+      break;
+    case Quote_Exp :
+      printf("quote");
+      PrintPairValue(value);
+      return;
+    case Pair_Exp :
+      PrintPairValue(value);
+      return;
+    case Halt_Exp :
+      printf("HALT\n");
+    case Bool_Exp :
+      printf("%s", value->u.int_value ? "#t" : "#f");
+      break;
+    case Null_Exp :
+      printf("()");
+      break;
+    default :
+      break;
+    }
+      value = value->next;
+  }
 
-int main(){
+}
+void PrintPairValue(Expr* value){
+    printf("(");
+    PrintValue(value->u.list);
+    printf(".");
+    PrintValue(value->next);
+    printf(")");
+}
+int main(int argc, char** argv){
+
+  ++argv, --argc;
+  if(argc >0){
+    yyin = fopen(argv[0], "r");
+  }else{
+    yyin = stdin;
+  }
   Env* env;
+  int lambda_number = 0;
   init_env(&env, NULL);
+  Expr* halt = malloc(sizeof(Expr));
   Expr* cont = malloc(sizeof(Expr));
-  cont->type = Halt_Exp;
-  cont->u.symbol = "halt";  
+  Expr* lambda= malloc(sizeof(Expr));
+  Expr* args= malloc(sizeof(Expr));
+  Expr* arg = malloc(sizeof(Expr));
+  Expr* body = malloc(sizeof(Expr));
+  cont->type = Pair_Exp;
+  cont->u.list = lambda;
+  cont->next = NullList();
+  lambda->type = Symbol_Exp;
+  lambda->u.symbol = "lambda";
+  lambda->next = args;
+  args->type = Pair_Exp;
+  args->u.list = arg;
+  args->next = body;
+  body->type = Pair_Exp;
+  body->u.list = halt;
+  halt->type = Halt_Exp;
+  halt->u.symbol = "halt";  
+  // halt->nextに処理したい対象を入れる。
+  arg->type = Symbol_Exp;
+  char arg_name[100];
+  sprintf(arg_name, "r_%d", lambda_number++); //lambda argument
+  arg->u.symbol = arg_name;
+  arg->next = NullList(); 
+
+  cont_endpoint =halt->next;
+  
   for(;;){
     printf(">");
     Expr* expr = Parse();
@@ -367,19 +455,23 @@ int main(){
       puts("END OF PROMPT");
       break;
     }else{
-      PrintExpr(expr);
-      /*      expr = Conv(&env, expr, cont);
-      puts("---Conversion...\n===Return AST===");
-      PrintExpr(expr);*/
+      //      PrintExpr(expr);
+/*            puts("START conv");
+            expr = Conv(&env, expr, cont);
+            puts("---Conversion...\n===Return AST===");
+            PrintExpr(expr);
+            puts("END"); */
+      puts("START eval");
       expr = Eval(&env, expr, NULL);
+      puts("---Eval...");
       depth = 0;
-      puts("---Eval...\n===Return Value===");
-      PrintExpr(expr);
-      puts("");
-      if(expr->type == Halt_Exp){
-	puts("HALT!");
-      goto END;
-      }
+      puts("===Return Value===");
+      PrintValue(expr);
+      puts("END");
+/*            if(expr->type == Halt_Exp){
+      	puts("HALT!");
+           goto END;
+         }*/
     }
   }
  END:

@@ -28,7 +28,8 @@ typedef enum{
   Quote_Exp,
   Symbol_Exp,
   Pair_Exp,
-  Halt_Exp
+  Halt_Exp,
+  Null_Exp
 }ExpressionType;
 
 struct Expr_t{
@@ -63,6 +64,7 @@ Expr* Parse();
 Expr* ParseQuote();
 Expr* ParseList();
 Expr* ParseLiteral();
+Expr* ParseSymbol();
 
 Expr* AddList(Expr* expr);
 Expr* AddSymbol(Expr* expr, char *sym);
@@ -74,6 +76,9 @@ Expr* AddBoolean(Expr* expr, char *booltext);
 Expr* ExprTail(Expr* expr);
 char* MakeSymbol(char* yytext);
 void PrintExpr(Expr* expr);
+void PrintValue(Expr* value);
+void PrintPairValue(Expr* value);
+
 Expr* GetSecond(Expr* expr);
 Expr* GetThird(Expr* expr);
 
