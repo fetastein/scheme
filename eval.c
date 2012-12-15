@@ -393,7 +393,7 @@ Expr* EvalAppend(Env* env, Expr* expr, Expr* cont){
   Expr* arg2 = Eval(env, expr->next->next, cont);
   puts("arg1 in append");
   PrintValue(arg1);
-  puts("arg2 in append");
+  puts("\narg2 in append");
   PrintValue(arg2);
   puts("");
   if(arg1->type == Null_Exp && arg2->type == Null_Exp){
@@ -402,8 +402,9 @@ Expr* EvalAppend(Env* env, Expr* expr, Expr* cont){
     return arg2;
   }else if(arg2->type == Null_Exp){
     return arg1;
-  }else if(arg1->type == Pair_Exp && arg2->type){
-    Expr* tail_expr = ListLastBefore(arg1->next);
+  }else if(arg1->type == Pair_Exp && arg2->type == Pair_Exp){
+    printf("list append \n");
+    Expr* tail_expr = ListLastBefore(arg1);
     tail_expr->next = arg2;
     return arg1;
   }else{
