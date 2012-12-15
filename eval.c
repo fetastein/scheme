@@ -1,7 +1,10 @@
 #include"scheme.h"
 #include"eval.h"
 Expr* Eval(Env* env, Expr* expr, Expr* cont){
-  if(expr->evaled == 1) return expr;
+  if(expr->evaled == 1) {
+    printf("evaled\n");
+    return expr;
+  }
   while(expr != NULL){
 
     switch(expr->type){
@@ -114,8 +117,11 @@ Expr* EvalPair(Env* env, Expr* expr, Expr* cont){
     return EvalGT(env, expr, cont);
   }else{
     //    puts("Eval Function");
-    printf("funcname is %s\n", expr->u.symbol);
-    return EvalFunction(env, expr,  cont);
+    char* funcname = expr->u.symbol;
+    //    printf("funcname is %s\n", funcname);
+    Expr* ret =  EvalFunction(env, expr,  cont);
+    return ret;
+    //    printf("funcname %s end\n", funcname);
   }
 }
 
@@ -178,6 +184,7 @@ char *get_symbol_element(Expr *expr){
 Expr* EvalFunction(Env* env, Expr* expr, Expr* cont){
   Expr *args, *body, *function;
   Env new_env;
+
   //  PrintExpr(expr);
   init_env(&new_env, env); // tmp env, it exists only while executing this function
   //  puts("DEBUG");
@@ -207,6 +214,7 @@ Expr* EvalFunction(Env* env, Expr* expr, Expr* cont){
   //  printf("BODY\n");
   //    PrintExpr(body);
   //  puts("BODYend");
+
   return EvalPair(&new_env, body, cont);
 }
 
@@ -223,7 +231,8 @@ Expr* EvalIf(Env *env, Expr* expr, Expr* cont){
 
   if(test_val){
     //      printf("in true");
-    return Eval(env, then_expr, cont);
+    Expr* ret = Eval(env, then_expr, cont);
+    return ret;
   }else{
     //      printf("in false");
     return Eval(env, else_expr, cont);
@@ -272,7 +281,7 @@ Expr* EvalCons(Env* env, Expr* expr, Expr* cont){
   Expr* ret = malloc(sizeof(Expr));
   ret->type = Pair_Exp;
   ret->u.list = arg1;
-  arg1->next = NullList();
+  //  arg1->next = NullList();
   //  ar->next  = arg2;
   ret->next = arg2;
   return ret;
