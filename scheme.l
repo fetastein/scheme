@@ -276,6 +276,7 @@ void PrintExpr(Expr* expr){
       printf("NULL expr\n");
       break;
     default :
+    if(expr == NULL) puts("NULL!");
       break;
     }
 
@@ -326,7 +327,7 @@ Expr *lookup_expr_symbol(Env* env, char* symbol_name){
     }
   }
 
-  //  printf("Not found %s in current Env%s", symbol_name);
+//    printf("Not found %s in current Env%s", symbol_name);
   if(env->parent == NULL){
     fputs("Error: there is no such expr\n", stderr);
     exit(1);
@@ -374,11 +375,11 @@ void PrintValue(Expr* value){
   while(value != NULL){
     switch(value->type){
     case Number_Exp :
-      printf(" %d", value->u.int_value);
+      printf(" %d:Num", value->u.int_value);
       //      break;
       return;
     case Symbol_Exp :
-      printf(" %s", value->u.symbol);
+      printf(" %s:Sym", value->u.symbol);
       break;
     case Quote_Exp :
       printf("quote");
@@ -390,7 +391,7 @@ void PrintValue(Expr* value){
     case Halt_Exp :
       printf("HALT\n");
     case Bool_Exp :
-      printf("%s", value->u.int_value ? "#t" : "#f");
+      printf("%s:Bool", value->u.int_value ? "#t" : "#f");
       break;
     case Null_Exp :
       printf("()");

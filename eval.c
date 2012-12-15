@@ -1,7 +1,7 @@
 #include"scheme.h"
 #include"eval.h"
 Expr* Eval(Env* env, Expr* expr, Expr* cont){
-
+  if(expr->evaled == 1) return expr;
   while(expr != NULL){
 
     switch(expr->type){
@@ -54,7 +54,20 @@ Expr* EvalNullp(Env* env, Expr* expr, Expr* cont){
   Expr* ret = malloc(sizeof(Expr));
   ret->type = Bool_Exp;
   //  printf("%d", (Eval(env, GetSecond(expr), cont))->type);
-  ret->u.int_value = ((Eval(env, GetSecond(expr), cont))->type == Null_Exp);
+  Expr* res = Eval(env, GetSecond(expr), cont);
+  printf("val ");
+  PrintValue(res);
+  if(res == NULL){
+    printf("NULL");
+    ret->u.int_value = 1;
+  }else{
+    printf(" type %d ", res->type);
+    ret->u.int_value = (res->type == Null_Exp);
+    if(ret->type == Pair_Exp){
+      ret->u.int_value = (res->u.list->type == Null_Exp);
+    }
+  }
+  puts("");
   ret->next = NullList();
   return ret;
 }
@@ -101,6 +114,7 @@ Expr* EvalPair(Env* env, Expr* expr, Expr* cont){
     return EvalGT(env, expr, cont);
   }else{
     //    puts("Eval Function");
+    printf("funcname is %s\n", expr->u.symbol);
     return EvalFunction(env, expr,  cont);
   }
 }
@@ -203,15 +217,15 @@ Expr* EvalIf(Env *env, Expr* expr, Expr* cont){
   test_expr = expr->next;
   then_expr = expr->next->next;
   else_expr = expr->next->next->next;
-  
+  //  puts("testvalue ");
   Expr*  test_val_exp = Eval(env, test_expr, cont);
   int test_val = test_val_exp->u.int_value;
 
   if(test_val){
-    //  printf("in true");
+    //      printf("in true");
     return Eval(env, then_expr, cont);
   }else{
-    //  printf("in false");
+    //      printf("in false");
     return Eval(env, else_expr, cont);
   }
   fputs("Error: error in if expression\n", stderr);  
@@ -225,12 +239,20 @@ Expr* EvalLambda(Env* env, Expr* expr, Expr* cont){
  
 Expr* EvalCar(Env* env, Expr* expr,  Expr* cont){
   Expr* tmp = Eval(env, expr->next, cont);
-  Expr* tmp_next = tmp->u.list;
-  return tmp_next;
+  Expr* tmp_list = tmp->u.list;
+  printf("car");
+  PrintValue(tmp);
+  PrintValue(tmp_list);
+  puts("");
+  return tmp_list;
 }
 
 Expr* EvalCdr(Env* env, Expr* expr, Expr* cont){
   Expr* tmp = Eval(env, expr->next, cont);
+  printf("cdr");
+  PrintValue(tmp);
+  PrintValue(tmp->next);
+  puts("");
   return tmp->next;
 }
 
@@ -266,7 +288,7 @@ Expr* cons(Expr* arg1, Expr* arg2){
 
   ret->u.list = arg1;
   ret->next = arg2;
-
+  ret->evaled = 1;
   return ret;
 }
 
@@ -276,6 +298,7 @@ return  EvalList_(env, expr->next, cont);
 }
 
 Expr* dup(Expr* expr){
+  puts("dup!");
   Expr* ret = malloc(sizeof(Expr));
   ret->type = expr->type;
   ret->u = expr->u;
@@ -301,39 +324,51 @@ Expr* EvalList_(Env* env, Expr* expr, Expr* cont){
     Expr* arg2 = EvalList_(env, rest, cont);
 
     Expr* ret =  cons(Eval(env, arg1, cont), arg2);
-
+    ret->evaled = 1;
     return ret;
   }
 }
 
 Expr* EvalLet(Env* env, Expr* expr, Expr* cont){
-  Expr* bindings = expr->next->u.list, *bind;
+  Expr* bindings = expr->next;
+  Expr* bind;
   Env* new_env;
   init_env(&new_env, env);
 
-  //  PrintExpr(bindings);
+  PrintExpr(bindings);
   while(bindings != NULL){
+      printf("type is %d\n", bindings->type);
     if(bindings->type == Pair_Exp){
-      
-      bind = bindings->u.list;
+
+      bind = bindings->u.list->u.list;
       char *symbol = get_symbol_element(bind);
       printf("symbolis %s", symbol);
-      //    printf("type is %d\n", bind->next->type);
-      Expr* val_expr = Eval(env, bind->next, cont);
-      PrintExpr(val_expr);
-
-      record_expr(&new_env, symbol, val_expr);
+      printf("type is %d\n", bind->next->type);
+      Expr* val_expr = Eval(env,dup( bind->next), cont);
+       PrintExpr(val_expr);
+       
+       puts("Bindings");
+       PrintExpr(bindings);
+       record_expr(&new_env, symbol, val_expr);
+       puts("Bindings 2");
+       PrintExpr(bindings);
     }
-    
-    bindings = GetSecond(bindings); 
+    //    puts("aaa");
+    //    printf("bindings->next is %d\n", bindings->next == NULL);
+    //    printf("next bind expr's type is %d\n", bindings->type);
+    puts("DEBUG");
     PrintExpr(bindings);
-    
-  }
+   bindings = GetSecond(bindings); 
+   PrintExpr(bind->next->next);
 
+  }
+  puts("out let");
   return Eval(&new_env, expr->next->next, cont);
 }
 Expr* ListLastBefore(Expr* expr){
-  if(expr->next->type == Null_Exp){
+  if(expr->next == NULL){
+    return nil();
+  }else if(expr->next->type == Null_Exp){
     return expr;
   }else if(expr->next->type != Pair_Exp){
     return nil();
@@ -347,6 +382,11 @@ Expr* EvalAppend(Env* env, Expr* expr, Expr* cont){
   puts("DEBUG");
   Expr* arg1 = Eval(env, expr->next, cont);
   Expr* arg2 = Eval(env, expr->next->next, cont);
+  puts("arg1 in append");
+  PrintValue(arg1);
+  puts("arg2 in append");
+  PrintValue(arg2);
+  puts("");
   if(arg1->type == Null_Exp && arg2->type == Null_Exp){
     return nil();
   }else if(arg1->type == Null_Exp){
@@ -368,13 +408,14 @@ Expr* EvalGT(Env* env, Expr* expr, Expr* cont){
   Expr* ret = malloc(sizeof(Expr));
   ret->type = Bool_Exp;
 
+  //  printf("arg1=%d, arg2=%d\n", arg1->u.int_value, arg2->u.int_value);
   if(arg1->u.int_value > arg2->u.int_value){
     ret->u.int_value = 1;
     
         return ret;
 
   }else{
-    puts("less than");
+    //    puts("less than");
     ret->u.int_value = 0;
         return ret;
 

@@ -33,6 +33,7 @@ typedef enum{
 }ExpressionType;
 
 struct Expr_t{
+  int evaled;
   ExpressionType type;
   union{
     int int_value;
