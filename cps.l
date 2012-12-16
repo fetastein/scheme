@@ -16,7 +16,7 @@ mark 	  [\!\$\%\&\*\+\-\.\/\:\<\=\>\?\@\^\_~]
 alpha 	  [A-Za-z]
 digit     [0-9]
 ws 	  [ \t\n]
-com 	  \;;
+com       \;
 cr 	  \n
 escape 	  \\
 escaped   ({escape}{letter})
@@ -269,6 +269,7 @@ void PrintExpr(Expr* expr){
       break; 
     case Halt_Exp :
       printf("HALT\n");
+      break;
     case Bool_Exp :
       printf("bool valueis %d\n", expr->u.int_value);
       break;
@@ -375,11 +376,11 @@ void PrintValue(Expr* value){
   while(value != NULL){
     switch(value->type){
     case Number_Exp :
-      printf("%d", value->u.int_value);
+      printf(" %d:Num", value->u.int_value);
       //      break;
       return;
     case Symbol_Exp :
-      printf("%s", value->u.symbol);
+      printf(" %s:Sym", value->u.symbol);
       break;
     case Quote_Exp :
       printf("quote");
@@ -390,11 +391,12 @@ void PrintValue(Expr* value){
       return;
     case Halt_Exp :
       printf("HALT\n");
+      break;
     case Bool_Exp :
-      printf("%s", value->u.int_value ? "#t" : "#f");
+      printf("%s:Bool", value->u.int_value ? "#t" : "#f");
       break;
     case Null_Exp :
-      printf("nil");
+      printf("()");
       break;
     default :
       break;
@@ -405,28 +407,11 @@ void PrintValue(Expr* value){
 }
 void PrintPairValue(Expr* value){
     printf("(");
-    PrintValue_(value);
+    PrintValue(value->u.list);
+    printf(".");
+    PrintValue(value->next);
     printf(")");
 }
-
-void PrintValue_(Expr* value){
-  PrintValue(value->u.list);
-  if(value->next == NULL){
-    printf("next null");
-    return;
-  }
-  if(value->next->type == Pair_Exp){
-    printf(" ");
-    PrintValue_(value->next);
-  }else if(value->next->type == Null_Exp){
-    return;
-  }else{
-    printf(" . ");
-    PrintValue(value->next);
-    return;
-  }
-}
-
 int main(int argc, char** argv){
 
   ++argv, --argc;
@@ -456,8 +441,8 @@ int main(int argc, char** argv){
   body->type = Pair_Exp;
   body->u.list = halt;
   halt->type = Halt_Exp;
-  halt->next = arg;
   halt->u.symbol = "halt";  
+  halt->next = arg;
   // halt->nextに処理したい対象を入れる。
   arg->type = Symbol_Exp;
   char arg_name[100];
@@ -475,11 +460,11 @@ int main(int argc, char** argv){
       break;
     }else{
       //      PrintExpr(expr);
-/*            puts("START conv");
+            puts("START conv");
             expr = Conv(&env, expr, cont);
             puts("---Conversion...\n===Return AST===");
             PrintExpr(expr);
-            puts("END"); */
+            puts("END"); 
       puts("START eval");
       expr = Eval(&env, expr, NULL);
       puts("---Eval...");
@@ -487,10 +472,10 @@ int main(int argc, char** argv){
       puts("===Return Value===");
       PrintValue(expr);
       puts("END");
-/*            if(expr->type == Halt_Exp){
+            if(expr->type == Halt_Exp){
       	puts("HALT!");
            goto END;
-         }*/
+         }
     }
   }
  END:

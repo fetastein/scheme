@@ -92,7 +92,8 @@ Expr* EvalPair(Env* env, Expr* expr, Expr* cont){
   }else if(strcmp(expr->u.symbol, "lambda") == 0){
     return EvalLambda(env, expr, cont);
   }else if(strcmp(expr->u.symbol, "halt") == 0){
-    return expr; // return Halt expression.
+    //    return expr; // return Halt expression.
+    return Eval(env, GetSecond(expr), cont);
   }else if(strcmp(expr->u.symbol, "car") == 0){
     return EvalCar(env, expr, cont);
   }else if(strcmp(expr->u.symbol, "cdr") == 0){

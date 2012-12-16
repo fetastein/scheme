@@ -138,12 +138,12 @@ Expr* ConvDefine(Env* env, Expr* expr, Expr* cont){
   Expr* arg = malloc(sizeof(Expr));
   Expr* args = malloc(sizeof(Expr));
   Expr* define_sym = malloc(sizeof(Expr));
-  Expr* lambda_body = main(sizeof(Expr));
+  Expr* lambda_body = malloc(sizeof(Expr));
 
   printf("in conv_define \n"); 
   char arg_name[100];
   sprintf(arg_name, "r_%d", lambda_number++); //lambda argument
-  puts("DEBUG");
+  printf("%s\n", arg_name);
   Expr* sym_exp = GetSecond(expr);
     puts("DEBUG");
     printf("%d\n", sym_exp->type);
@@ -161,7 +161,7 @@ Expr* ConvDefine(Env* env, Expr* expr, Expr* cont){
 
   args->type = Pair_Exp;
   args->u.list = arg;
-  arg->next = body;
+  args->next = body;
   
   arg->type = Symbol_Exp;
   arg->u.symbol = arg_name;
@@ -179,7 +179,7 @@ Expr* ConvDefine(Env* env, Expr* expr, Expr* cont){
   lambda->type = Pair_Exp;
   lambda->u.symbol = lambda_body;
   lambda->next = NullList();
-
+  
   lambda_body->type = Symbol_Exp;
   lambda_body->u.symbol = "lambda";
   lambda_body->next = args;
