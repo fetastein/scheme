@@ -206,7 +206,7 @@ Expr* EvalFunction(Env* env, Expr* expr, Expr* cont){
     char *symbol = get_symbol_element(args);
     Expr* val_expr = Eval(env, expr, cont);
     //    int value = val_expr->u.int_value;
-    record_expr(&new_env, symbol, val_expr);
+    record_expr(new_env, symbol, val_expr);
     args = GetSecond(args);
     expr = GetSecond(expr);
   }
@@ -342,8 +342,8 @@ Expr* EvalList_(Env* env, Expr* expr, Expr* cont){
 Expr* EvalLet(Env* env, Expr* expr, Expr* cont){
   Expr* bindings = expr->next;
   Expr* bind;
-  Env* new_env;
-  init_env(&new_env, env);
+  Env* new_env = malloc(sizeof(Env));
+  init_env(new_env, env);
 
   PrintExpr(bindings);
   while(bindings != NULL){
@@ -359,7 +359,7 @@ Expr* EvalLet(Env* env, Expr* expr, Expr* cont){
        
        puts("Bindings");
        PrintExpr(bindings);
-       record_expr(&new_env, symbol, val_expr);
+       record_expr(new_env, symbol, val_expr);
        puts("Bindings 2");
        PrintExpr(bindings);
     }
@@ -373,7 +373,7 @@ Expr* EvalLet(Env* env, Expr* expr, Expr* cont){
 
   }
   puts("out let");
-  return Eval(&new_env, expr->next->next, cont);
+  return Eval(new_env, expr->next->next, cont);
 }
 Expr* ListLastBefore(Expr* expr){
   if(expr->next == NULL){

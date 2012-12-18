@@ -474,7 +474,7 @@ int main(int argc, char** argv){
       puts("END OF PROMPT");
       break;
     }else{
-      //      PrintExpr(expr);
+            PrintExpr(expr);
 /*            puts("START conv");
             expr = Conv(&env, expr, cont);
             puts("---Conversion...\n===Return AST===");
