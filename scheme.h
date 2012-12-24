@@ -32,6 +32,7 @@ typedef enum{
   Null_Exp
 }ExpressionType;
 
+
 struct Expr_t{
   int evaled;
   ExpressionType type;
@@ -46,7 +47,7 @@ struct Expr_t{
 typedef struct Expr_t    Expr;
 
 /*======Environment struct definition======*/
-#define ENVIRONMENT_SIZE 64
+#define ENVIRONMENT_SIZE 256
 
 struct Env_t {
     int         num;

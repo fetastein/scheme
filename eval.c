@@ -184,10 +184,10 @@ char *get_symbol_element(Expr *expr){
 
 Expr* EvalFunction(Env* env, Expr* expr, Expr* cont){
   Expr *args, *body, *function;
-  Env new_env;
+  Env* new_env = malloc(sizeof(Env));
 
   //  PrintExpr(expr);
-  init_env(&new_env, env); // tmp env, it exists only while executing this function
+  init_env(new_env, env); // tmp env, it exists only while executing this function
   //  puts("DEBUG");
   //  PrintExpr(expr);
   //  puts("");
@@ -216,7 +216,7 @@ Expr* EvalFunction(Env* env, Expr* expr, Expr* cont){
   //    PrintExpr(body);
   //  puts("BODYend");
 
-  return EvalPair(&new_env, body, cont);
+  return EvalPair(new_env, body, cont);
 }
 
 /* eval if statement */

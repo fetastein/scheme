@@ -5,6 +5,26 @@ int lambda_number = 1;
 
 
 
+Expr* duprec(Expr* expr){
+  Expr* ret = malloc(sizeof(Expr));
+
+  ret->type = expr->type;
+  if(expr->type == Pair_Exp){
+    ret->u.list = duprec(expr->u.list);
+  }else{
+    ret->u = expr->u;
+  }
+  if(expr->next == NULL){
+    ret->next = NullList();
+  }else if(expr->next->type == Pair_Exp){
+    ret->next = duprec(expr->next);
+  }else{
+    ret->next = expr->next;
+  }
+  return ret;
+}
+
+
 Expr* ConvLiteral(Env* env, Expr* expr, Expr* cont){
   Expr* ret = malloc(sizeof(Expr));
   ret->type = Pair_Exp;
@@ -52,8 +72,77 @@ Expr* makelambda(Expr* img_args, Expr* val){
 }
 //img = imaginary
 
-Expr* ConvApply(Env* env, Expr* expr, Expr* cont){
-  Expr *real_args, *lstargcont, *lstargcontlambda, *lstargcontargs, *arg0;
+Expr* ConvIf(Env* env, Expr* expr, Expr* cont){
+  puts("in Conv if");
+  Expr* e1 = GetSecond(expr);
+  Expr* e2 = GetThird(expr);
+  Expr* e3 = e2->next; 
+  puts("   e2");
+  PrintExpr(e2);
+  puts("   e3");
+  PrintExpr(e3);
+  printf("    dup(e2)");
+  PrintExpr(dup(e2));
+  e2 = Conv(env, dup(e2), duprec(cont));
+  puts("   convede2");
+  PrintExpr(e2);
+  Expr* duprece2 = duprec(e2);
+  puts("   duprece2");
+  PrintExpr(duprece2);
+  e3 = Conv(env, dup(e3), cont);
+  puts("e3");
+  PrintExpr(e3);
+
+  Expr* new_cont, *r1, *ifexp, *val;
+  new_cont = malloc(sizeof(Expr));
+  r1 = malloc(sizeof(Expr));
+  ifexp = malloc(sizeof(Expr));
+  val = malloc(sizeof(Expr));
+
+  val->type = Pair_Exp;
+  val->u.list = ifexp;
+  val->next = NullList();
+  
+  r1 = makearg(makearg_name());
+  
+  ifexp->type = Symbol_Exp;
+  ifexp->u.symbol = "if";
+  ifexp->next = r1;
+  
+  r1->next = e2;
+  e2->next = e3;
+  puts("e2");
+  PrintExpr(e2);
+  puts("e3");
+  PrintExpr(e3);
+
+  new_cont = makelambda(dup(r1), val);
+
+  return Conv(env, e1, new_cont);
+}
+
+char primitives[PRI_NUM][PRI_MAXLEN] = {"+", "-", "*", "cdr", ">", "<"};
+Expr* ConvApplyDispatch(Env* env, Expr* expr, Expr* cont){
+  int primitivep = 0, i;
+  //  printf("%s is operator; %s is primitves[0]\n", expr->u.symbol, primitives[0]);
+  for(i = 0; i < PRI_NUM; i++){
+        printf("%s\n", primitives[i]);
+    if(strcmp(primitives[i], expr->u.symbol)==0) primitivep = 1;
+    //    printf("aa\n");
+  }
+  puts("DEBUG");
+  if(primitivep == 1){
+    printf("to conv primitive\n");
+    return ConvPrimitive(env, expr, cont);
+  }else{
+    printf("to conv apply");
+    return ConvApply(env, expr, cont);
+  }
+}
+    
+
+Expr* ConvPrimitive(Env* env, Expr* expr, Expr* cont){
+  Expr *real_args, *lstargcont, *lstargcontlambda, *lstargcontargs, *operator, *convedargs, *operation, *val;
   char ** arg_namearr = malloc(sizeof(char[16]) * 32);
   Expr** valarr = malloc(sizeof(Expr) * 32);
   Expr** argarr = malloc(sizeof(Expr) * 32);
@@ -61,19 +150,18 @@ Expr* ConvApply(Env* env, Expr* expr, Expr* cont){
   lstargcont = malloc(sizeof(Expr));
   lstargcontlambda = malloc(sizeof(Expr));
   lstargcontargs = malloc(sizeof(Expr));
+  operation = malloc(sizeof(Expr));
+  val = malloc(sizeof(Expr));
 
-  real_args = expr;
-  puts("arg0");
-  PrintExpr(real_args);
-  puts("arg1");
-  PrintExpr(real_args->next);
+  
+  operator = dup(expr);
+  real_args = expr->next; //except operator 
   while(real_args){
     arg_namearr[p] = makearg_name();
     valarr[p] = real_args;
     p++;
     real_args = real_args->next;
   }
-  puts("DEBUG");
   argarr[p] = makearg(arg_namearr[p]);
   for(i = p-1; i >= 0; i--){
     argarr[i] = makearg(arg_namearr[i]); 
@@ -89,19 +177,111 @@ Expr* ConvApply(Env* env, Expr* expr, Expr* cont){
   lstargcontlambda->next = lstargcontargs;
  
   lstargcontargs->type = Pair_Exp;
-  lstargcontargs->u.list = dup(argarr[p]);
-  lstargcontargs->next = arg0;
+  lstargcontargs->u.list = dup(argarr[p-1]);
+  lstargcontargs->next = operation;
   
-  arg0 = argarr[0];
-  arg0->next = cont;
-  cont->next = (argarr[1] == NULL) ? argarr[1] : NULL;
-  printf("lstargcont p=%d", p);
-  PrintExpr(lstargcont);
-//  convedval = Conv(env, valarr[p], lstargcont);
-  for(i = p; i >= 0; i--){
-    lstargcont = Conv(env, makelambda(dup(argarr[i]), valarr[p]), lstargcont);
+  operation->type = Pair_Exp;
+  operation->u.list = cont;
+  operation->next = NullList();
+  
+  cont->next = val;
+  
+  val->type = Pair_Exp;
+  val->u.list = operator;
+  val->next = NullList();
+  
+  operator->next = argarr[0];
+
+  //  puts("OPERATOR");
+  //  PrintExpr(lstargcont);
+  //  puts("END");
+  for(i = p-1; i > 0; i--){
+    //    puts("VAL");
+    //    PrintExpr(valarr[i]);
+
+    Expr* tmp = Conv(env, valarr[i], lstargcont);
+    lstargcont = makelambda(dup(argarr[i-1]), tmp);
+    //    printf("CONV tmp i=%dn", i);
+    //    PrintExpr(tmp);
+    //    puts("END");
+    //    puts("CONV lstargcont");
+    //    PrintExpr(lstargcont);
+    //    puts("END");
   }
+  convedargs = Conv(env, valarr[0], lstargcont);
+  return convedargs;
+}
   
+
+Expr* ConvApply(Env* env, Expr* expr, Expr* cont){
+  Expr *real_args, *lstargcont, *lstargcontlambda, *lstargcontargs, *arg0, *convedval, *val;
+  char ** arg_namearr = malloc(sizeof(char[16]) * 32);
+  Expr** valarr = malloc(sizeof(Expr) * 32);
+  Expr** argarr = malloc(sizeof(Expr) * 32);
+  int p = 0, i;  
+  lstargcont = malloc(sizeof(Expr));
+  lstargcontlambda = malloc(sizeof(Expr));
+  lstargcontargs = malloc(sizeof(Expr));
+  val = malloc(sizeof(Expr));
+
+  real_args = expr;
+  //  puts("arg0");
+  //  PrintExpr(real_args);
+  //  puts("arg1");
+  //  PrintExpr(real_args->next);
+  while(real_args){
+    arg_namearr[p] = makearg_name();
+    valarr[p] = real_args;
+    p++;
+    real_args = real_args->next;
+  }
+  //  puts("DEBUG");
+  argarr[p] = makearg(arg_namearr[p]);
+  for(i = p-1; i >= 0; i--){
+    argarr[i] = makearg(arg_namearr[i]); 
+    argarr[i]->next = argarr[i+1];
+  }
+
+  lstargcont->type = Pair_Exp;
+  lstargcont->u.list = lstargcontlambda;
+  lstargcont->next = NullList();
+  
+  lstargcontlambda->type = Symbol_Exp;
+  lstargcontlambda->u.symbol = "lambda";
+  lstargcontlambda->next = lstargcontargs;
+ 
+  printf("===argarr[p-1]");
+  PrintExpr(argarr[p-1]);
+
+  arg0 = dup(argarr[0]);
+
+  lstargcontargs->type = Pair_Exp;
+  lstargcontargs->u.list = dup(argarr[p-1]);
+  lstargcontargs->next = val;//arg0;
+  
+  val->type = Pair_Exp;
+  val->u.list = arg0;
+  val->next = NullList();
+
+  //  puts("ARG0");
+  //  PrintExpr(arg0);
+  arg0->next = cont;
+  cont->next = (argarr[1] == NULL) ? NULL: argarr[1];
+  //  puts("ARGARR[1]");
+  //  PrintExpr(argarr[1]);
+  //  puts("lstargcont");
+  //  PrintExpr(lstargcont);
+  convedval = Conv(env, valarr[p-1], lstargcont);
+  for(i = p-1; i >= 0; i--){
+    printf("lstargcont p=%d", i);
+    PrintExpr(lstargcont);  
+    lstargcont = Conv(env, valarr[i], lstargcont);
+    printf("CONVEDlstargcont p=%d", i);
+    PrintExpr(lstargcont);
+    if(i>0) lstargcont = makelambda(dup(argarr[i-1]), lstargcont);
+  }
+
+
   return lstargcont;
 }
   
@@ -109,11 +289,11 @@ Expr* ConvBegin(Env* env, Expr* expr, Expr* cont){
   puts("in Conv Begin");
   Expr* e1 = GetSecond(expr);
   Expr* e2 = GetThird(expr);
-  PrintExpr(e2);
-  printf("%d %d\n", e1->type, Number_Exp);
+  //  PrintExpr(e2);
+  //  printf("%d %d\n", e1->type, Number_Exp);
    e2 = Conv(env, e2, cont);
-  puts("e2 is Conv-ed\n");
-  PrintExpr(e2);
+   //  puts("e2 is Conv-ed\n");
+   //  PrintExpr(e2);
   Expr* ret, *lambda, *args, *arg;
   ret = malloc(sizeof(Expr));
   lambda = malloc(sizeof(Expr));
@@ -131,13 +311,13 @@ Expr* ConvBegin(Env* env, Expr* expr, Expr* cont){
   args->u.list = arg;
   args->next = e2;
 
-  char arg_name[100];
+  char *arg_name = malloc(sizeof(char) * 64);
   sprintf(arg_name, "r_%d", lambda_number++); //lambda argument
 
   arg->type = Symbol_Exp;
-  printf("%s\n", arg_name);
+  //  printf("%s\n", arg_name);
   arg->u.symbol = arg_name;
-    puts("DEBUG");
+  //    puts("DEBUG");
   arg->next = NullList();
   puts("get out Conv Begin");
   return Conv(env, e1, ret);
@@ -176,14 +356,14 @@ Expr* ConvLambda(Env* env, Expr* expr, Expr* cont){
   cont_arg->u.symbol = arg_name;
   cont_arg->next = oldargs;
 
-  val = Conv(env, expr->next->next, cont_arg);
+  val = Conv(env, expr->next->next, dup(cont_arg));
 
-  puts("expr->next->next");
-  PrintExpr(expr->next->next);
-  puts("val");
-  PrintExpr(val);
-    puts("oldargs");
-  PrintExpr(oldargs);
+  //  puts("expr->next->next");
+  //  PrintExpr(expr->next->next);
+  //  puts("val");
+  //  PrintExpr(val);
+  //    puts("oldargs");
+  //  PrintExpr(oldargs);
 
   //  lambda_outside->type = Pair_Exp;
   //  lambda_outside->u.list = lambda;
@@ -291,7 +471,7 @@ Expr* ConvDefine(Env* env, Expr* expr, Expr* cont){
   Expr* lambda_body = malloc(sizeof(Expr));
 
   printf("in conv_define \n"); 
-  char arg_name[100];
+  char *arg_name = malloc(sizeof(char) * 64);
   sprintf(arg_name, "r_%d", lambda_number++); //lambda argument
   printf("%s\n", arg_name);
   Expr* sym_exp = GetSecond(expr);
@@ -345,7 +525,7 @@ Expr* ConvPair(Env* env, Expr* expr, Expr* cont){
 
   Expr* tmp = expr->u.list;
 
-//  printf("symbol is %s in conv_pair\n", tmp->u.symbol);
+  printf("symbol is %s in conv_pair\n", tmp->u.symbol);
     if(strcmp(tmp->u.symbol, "define") == 0){
       puts("to conv_define");
       return ConvDefine(env, tmp, cont);
@@ -358,9 +538,12 @@ Expr* ConvPair(Env* env, Expr* expr, Expr* cont){
     }else if(strcmp(tmp->u.symbol, "lambda") == 0){
       printf("lambda");
       return ConvLambda(env, tmp, cont);
+    }else if(strcmp(tmp->u.symbol, "if") == 0){
+      printf("to conv if");
+      return ConvIf(env, tmp, cont);
     }else{
-      printf("go conv apply");
-      return ConvApply(env, tmp, cont);
+      printf("go conv apply\n");
+      return ConvApplyDispatch(env, tmp, cont);
       //      printf("ERROR : cannot this program covert to CPS");
       //      exit(1);
     }

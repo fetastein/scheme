@@ -370,19 +370,76 @@ void record_integer(Env* env, char* symbol, int value)
 /* init environmet */
 void init_env(Env* env, Env* parent){
   env->num = 0;
-  env->parent = parent;
+  env->parent = parent ;
 }
+void PrintValue(Expr* value){
+  printf(" ");
+  while(value != NULL){
+    switch(value->type){
+    case Number_Exp :
+      printf("%d", value->u.int_value);
+      //      break;
+      return;
+    case Symbol_Exp :
+      printf("%s", value->u.symbol);
+      break;
+    case Quote_Exp :
+      printf("quote");
+      PrintPairValue(value);
+      return;
+    case Pair_Exp :
+      PrintPairValue(value);
+      return;
+    case Halt_Exp :
+      printf("HALT\n");
+    case Bool_Exp :
+      printf("%s", value->u.int_value ? "#t" : "#f");
+      break;
+    case Null_Exp :
+      printf("nil");
+      break;
+    default :
+      break;
+    }
+      value = value->next;
+  }
+
+}
+void PrintPairValue(Expr* value){
+    printf("(");
+    PrintValue_(value);
+    printf(")");
+}
+
+void PrintValue_(Expr* value){
+  PrintValue(value->u.list);
+  if(value->next == NULL){
+//    printf("next null");
+    return;
+  }
+  if(value->next->type == Pair_Exp){
+    printf(" ");
+    PrintValue_(value->next);
+  }else if(value->next->type == Null_Exp){
+    return;
+  }else{
+    printf(" . ");
+    PrintValue(value->next);
+    return;
+  }
+}
+/* DEPRECATED
 // CONT endpoint
 Expr* cont_endpoint;
 void PrintValue(Expr* value){
   while(value != NULL){
     switch(value->type){
     case Number_Exp :
-      printf(" %d:Num", value->u.int_value);
+      printf(" %d", value->u.int_value);
       //      break;
       return;
     case Symbol_Exp :
-      printf(" %s:Sym", value->u.symbol);
+      printf(" %s", value->u.symbol);
       break;
     case Quote_Exp :
       printf("quote");
@@ -395,7 +452,7 @@ void PrintValue(Expr* value){
       printf("HALT\n");
       break;
     case Bool_Exp :
-      printf("%s:Bool", value->u.int_value ? "#t" : "#f");
+      printf("%s", value->u.int_value ? "#t" : "#f");
       break;
     case Null_Exp :
       printf("()");
@@ -413,7 +470,8 @@ void PrintPairValue(Expr* value){
     printf(".");
     PrintValue(value->next);
     printf(")");
-}
+} */ 
+//DEPRECATED 
 int main(int argc, char** argv){
 
   ++argv, --argc;
@@ -422,9 +480,9 @@ int main(int argc, char** argv){
   }else{
     yyin = stdin;
   }
-  Env* env;
+  Env* env = malloc(sizeof(Env));
   int lambda_number = 0;
-  init_env(&env, NULL);
+  init_env(env, NULL);
   Expr* halt = malloc(sizeof(Expr));
   Expr* cont = malloc(sizeof(Expr));
   Expr* lambda= malloc(sizeof(Expr));
@@ -452,7 +510,7 @@ int main(int argc, char** argv){
   arg->u.symbol = arg_name;
   arg->next = NullList(); 
 
-  cont_endpoint =halt->next;
+//  cont_endpoint =halt->next;
   
   for(;;){
     printf(">");
@@ -465,7 +523,7 @@ int main(int argc, char** argv){
             puts("START conv");
             expr = Conv(&env, expr, cont);
             puts("---Conversion...\n===Return AST===");
-            PrintExpr(expr);
+            PrintValue(expr);
             puts("END"); 
       puts("START eval");
       expr = Eval(&env, expr, NULL);

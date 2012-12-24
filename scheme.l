@@ -435,9 +435,9 @@ int main(int argc, char** argv){
   }else{
     yyin = stdin;
   }
-  Env* env;
+  Env* env = malloc(sizeof(Env));
   int lambda_number = 0;
-  init_env(&env, NULL);
+  init_env(env, NULL);
   Expr* halt = malloc(sizeof(Expr));
   Expr* cont = malloc(sizeof(Expr));
   Expr* lambda= malloc(sizeof(Expr));
